@@ -18,6 +18,7 @@ client = pymongo.MongoClient("mongodb://localhost:27017/")
 db = client["Drug_Detection"]
 user_collection = db["PatternDB"]
 interaction_collection = db["interaction"]
+flagged_user_collection = db["FlaggedUsers"]
 
 # Data analysis and plotting function
 def analyze_and_plot_data():
@@ -104,8 +105,17 @@ def analyze_and_plot_data():
     kmeans_json = json.dumps(fig_kmeans, cls=plotly.utils.PlotlyJSONEncoder)
     network_json = json.dumps(fig_network, cls=plotly.utils.PlotlyJSONEncoder)
 
+    # Fetch flagged user data
+    flagged_users = list(flagged_user_collection.find({}, {"_id": 0}))
+    for user in flagged_users:
+        user['suspicious_words'] = user.get('suspicious_words', [])
+
     # Emit JSON to frontend
-    socketio.emit('graph_update', {'kmeans': kmeans_json, 'network': network_json}, namespace='/admin')
+    socketio.emit('graph_update', {
+        'kmeans': kmeans_json,
+        'network': network_json,
+        'flagged_users': flagged_users
+    }, namespace='/admin')
 
 # Route to load admin dashboard
 @app.route('/admin')

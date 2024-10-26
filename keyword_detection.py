@@ -19,7 +19,7 @@ def detect_drug_keywords(text):
             found_keywords.append(keyword.strip(r'\b'))
 
 
-return found_keywords if(found_keywords) else "No drug-related keywords found."
+    return found_keywords if(found_keywords) else "No drug-related keywords found."
 
 
 
