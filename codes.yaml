@@ -1,0 +1,3 @@
+Backend Setup: Start the Flask app by running python Pattern_Detection.py.
+Admin Dashboard: Open the dashboard by navigating to http://localhost:5000/admin in your browser.
+Trigger Analysis: Clicking "Start Analysis" on the dashboard requests the backend to fetch data, perform clustering, and generate a graph. The result will be shown in real-time in the #graphDiv section.

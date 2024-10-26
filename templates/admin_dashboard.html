@@ -1,0 +1,97 @@
+<!-- templates/admin_dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 20px;
+            font-size: 2.5em;
+        }
+        h2 {
+            margin-top: 40px;
+            font-size: 1.8em;
+        }
+        #start-analysis {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #start-analysis:hover {
+            background-color: #2980b9;
+        }
+        .graph-container {
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
+        }
+        #kmeans-graph, #network-graph {
+            height: 400px;
+            margin: 20px 0;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <button id="start-analysis">Start Analysis</button>
+    
+    <h2>K-Means Clustering of Users</h2>
+    <div id="kmeans-graph"></div>
+
+    <h2>User Interaction Network</h2>
+    <div id="network-graph"></div>
+
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port + '/admin');
+
+        document.getElementById('start-analysis').onclick = function() {
+            socket.emit('start_analysis');
+        };
+
+        socket.on('graph_update', function(data) {
+            // Update K-Means graph
+            var kmeansData = JSON.parse(data.kmeans);
+            Plotly.newPlot('kmeans-graph', kmeansData.data, kmeansData.layout);
+
+            // Update network graph
+            var networkData = JSON.parse(data.network);
+            Plotly.newPlot('network-graph', networkData.data, networkData.layout);
+        });
+    </script>
+</body>
+</html>
