@@ -3,10 +3,9 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import networkx as nx
-import random
 import plotly.graph_objects as go
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import json
 import plotly
 
@@ -17,27 +16,32 @@ socketio = SocketIO(app)
 # Connect to MongoDB
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 db = client["Drug_Detection"]
-collection = db["PatternDB"]
+user_collection = db["PatternDB"]
+interaction_collection = db["interaction"]
 
 # Data analysis and plotting function
 def analyze_and_plot_data():
-    # Fetch data from MongoDB
-    data = list(collection.find({}, {"_id": 0}))
-    df = pd.DataFrame(data)
-    
+    # Fetch user data from MongoDB
+    user_data = list(user_collection.find({}, {"_id": 0}))
+    df_users = pd.DataFrame(user_data)
+
+    # Check if there's enough data to perform clustering
+    if df_users.empty or len(df_users) < 2:
+        return None, None
+
     # Standardize features and perform clustering
     scaler = StandardScaler()
-    features = scaler.fit_transform(df[['drug_mentions', 'suspicious_words', 'posts_per_day', 'chat_messages']])
+    features = scaler.fit_transform(df_users[['drug_mentions', 'suspicious_words']])
     
     # Choose optimal k (e.g., 3 clusters) for clustering
     k_optimal = 3
     kmeans = KMeans(n_clusters=k_optimal, random_state=42)
-    df['cluster'] = kmeans.fit_predict(features)
+    df_users['cluster'] = kmeans.fit_predict(features)
 
     # K-Means clustering plot between drug mentions and suspicious words
     fig_kmeans = go.Figure()
     for i in range(k_optimal):
-        cluster_data = df[df['cluster'] == i]
+        cluster_data = df_users[df_users['cluster'] == i]
         fig_kmeans.add_trace(go.Scatter(
             x=cluster_data['drug_mentions'],
             y=cluster_data['suspicious_words'],
@@ -52,10 +56,16 @@ def analyze_and_plot_data():
         yaxis_title='Suspicious Words'
     )
 
-    # Generate or simulate user interactions for the network graph
-    user_ids = df['user_id'].tolist()
-    num_interactions = 10
-    edges = [(random.choice(user_ids), random.choice(user_ids)) for _ in range(num_interactions)]
+    # Fetch interaction data to create network graph
+    interactions = list(interaction_collection.find({}, {"_id": 0}))
+    edges = []
+
+    for conversation in interactions:
+        members = conversation['members']
+        if len(members) > 1:  # Only consider conversations with multiple members
+            for i in range(len(members)):
+                for j in range(i + 1, len(members)):
+                    edges.append((members[i], members[j]))
 
     # Create NetworkX graph and layout
     G = nx.Graph()
@@ -85,7 +95,7 @@ def analyze_and_plot_data():
         marker=dict(showscale=True, colorscale='YlGnBu', size=10, colorbar=dict(thickness=15, title='Node Connections'))
     )
 
-    # Create Plotly figure and emit JSON to frontend for user interaction network
+    # Create Plotly figure for network graph
     fig_network = go.Figure(data=[edge_trace, node_trace],
                     layout=go.Layout(title='Interactive User Interaction Network', titlefont_size=16,
                                      showlegend=False, hovermode='closest'))
@@ -110,4 +120,3 @@ def handle_start_analysis():
 # Run app
 if __name__ == '__main__':
     socketio.run(app, debug=True)
-j
